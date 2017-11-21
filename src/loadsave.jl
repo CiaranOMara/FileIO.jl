@@ -3,9 +3,11 @@ const sym2saver  = Dict{Symbol,Vector{Symbol}}()
 
 function is_installed(pkg::Symbol)
     isdefined(Main, pkg) && isa(getfield(Main, pkg), Module) && return true # is a module defined in Main scope
-    path = Base.find_in_path(string(pkg)) # hacky way to determine if a Package is installed
-    path == nothing && return false
-    return isfile(path)
+    version = try Pkg.installed(string(pkg)) end # Note: If pkg is registered, but not installed, Pkg.installed() returns nothing. Also, try block returns nothing if something fails.
+    if version != nothing
+        return true
+    end
+    return false
 end
 
 function checked_import(pkg::Symbol)
