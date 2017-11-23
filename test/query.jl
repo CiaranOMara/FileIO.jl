@@ -273,7 +273,7 @@ file_dir = joinpath(dirname(@__FILE__), "files")
     open(q) do io
         @test position(io) == 0
         skipmagic(io)
-        @test position(io) == 0 # no skipping for functions
+        @test position(io) == 532
         # @test FileIO.detect_bedgraph(io) # MethodError: no method matching readline(::FileIO.Stream{FileIO.DataFormat{:bedGraph},IOStream}; chomp=false)
     end
     open(joinpath(file_dir, "file.bedgraph")) do io

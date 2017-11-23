@@ -149,6 +149,10 @@ add_format(format"FLAC","fLaC",".flac",[:FLAC])
 ### Complex cases
 
 # bedGraph: the complication is that the magic bytes may start at any location within an indeterminate header.
+function isLikeBedgraphTrack(line::String) :: Bool
+    return  ismatch(r"^\s*([A-Za-z]+\S*)\s+(\d+)\s+(\d+)\s+(\S*\d)\s*$", line)
+end
+
 const bedgraph_magic = UInt8[0x74, 0x79, 0x70, 0x65, 0x3D, 0x62, 0x65, 0x64, 0x47, 0x72, 0x61, 0x70, 0x68]
 function detect_bedgraph(io)
     position(io) == 0 || return false
@@ -156,7 +160,7 @@ function detect_bedgraph(io)
     line = ""
 
     # Check lines for magic bytes.
-    while !eof(io) && !ismatch(r"^\s*([A-Za-z]+\S*)\s+(\d+)\s+(\d+)\s+(\S*\d)\s*$", line) # Note: regex is used to limit the search by exiting the loop when a line matches the bedGraph track format.
+    while !eof(io) && !isLikeBedgraphTrack(line) # Note: regex is used to limit the search by exiting the loop when a line matches the bedGraph track format.
         line = readline(io, chomp=false)
 
         if contains(line, String(bedgraph_magic)) # Note: String(bedgraph_magic) = "type=bedGraph"
@@ -167,6 +171,24 @@ function detect_bedgraph(io)
     return false
 end
 add_format(format"bedGraph", detect_bedgraph, [".bedgraph"], [:BedgraphFiles])
+
+# Custom magic function to skip bedGraph file header.
+function skipBedgraphHeader(io)
+
+    seekstart(io)
+
+    pos = position(io)
+    line = ""
+
+    while !eof(io) && !isLikeBedgraphTrack(line)
+        pos = position(io)
+        line = readline(io,chomp=false)
+    end
+
+    seek(io, pos)
+
+end
+skipmagic(io, ::typeof(detect_bedgraph)) = skipBedgraphHeader(io)
 
 # Handle OME-TIFFs, which are identical to normal TIFFs with the primary difference being the filename and embedded XML metadata
 const tiff_magic = (UInt8[0x4d,0x4d,0x00,0x2a], UInt8[0x4d,0x4d,0x00,0x2b], UInt8[0x49,0x49,0x2a,0x00],UInt8[0x49,0x49,0x2b,0x00])
